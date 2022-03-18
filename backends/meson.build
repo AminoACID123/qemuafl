@@ -6,6 +6,7 @@ softmmu_ss.add([files(
   'rng-builtin.c',
   'rng-egd.c',
   'rng.c',
+  'hostmem-shm.c',
   'confidential-guest-support.c',
 ), numa])
 

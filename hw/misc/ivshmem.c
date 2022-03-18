@@ -41,6 +41,8 @@
 #include "hw/misc/ivshmem.h"
 #include "qom/object.h"
 
+#include "afl.h"
+
 #define PCI_VENDOR_ID_IVSHMEM   PCI_VENDOR_ID_REDHAT_QUMRANET
 #define PCI_DEVICE_ID_IVSHMEM   0x1110
 
@@ -126,6 +128,7 @@ enum ivshmem_registers {
     INTRSTATUS = 4,
     IVPOSITION = 8,
     DOORBELL = 12,
+    UMA_COMM = 16,
 };
 
 static inline uint32_t ivshmem_has_feature(IVShmemState *ivs,
@@ -138,6 +141,45 @@ static inline bool ivshmem_is_master(IVShmemState *s)
     assert(s->master != ON_OFF_AUTO_AUTO);
     return s->master == ON_OFF_AUTO_ON;
 }
+
+static void ivshmem_uma_comm_write(IVShmemState *s, uint32_t val)
+{
+    printf("=== Write to UMA register with value: %d ===\n", val);
+
+
+    switch (val) {
+    case 1:
+        break;
+
+    case 2:
+        // TODO
+        break;
+    case 0x50:
+        // stop the test
+        if (in_afl)
+            stop_test(val);
+        break;
+
+    case 0x51:
+        if (in_afl)
+            stop_test(val);
+        break;
+
+    case 0x52:
+        if (in_afl)
+            reply_forksrv_handshake();
+        break;
+
+    default:
+        break;
+    }
+}
+
+static uint32_t ivshmem_uma_comm_read(IVShmemState *s)
+{
+    return 0;
+}
+
 
 static void ivshmem_IntrMask_write(IVShmemState *s, uint32_t val)
 {
@@ -207,6 +249,9 @@ static void ivshmem_io_write(void *opaque, hwaddr addr,
                                 vector, dest);
             }
             break;
+        case UMA_COMM:
+            ivshmem_uma_comm_write(s, val);
+            break;
         default:
             IVSHMEM_DPRINTF("Unhandled write " TARGET_FMT_plx "\n", addr);
     }
@@ -232,7 +277,9 @@ static uint64_t ivshmem_io_read(void *opaque, hwaddr addr,
         case IVPOSITION:
             ret = s->vm_id;
             break;
-
+        case UMA_COMM:
+            ret = ivshmem_uma_comm_read(s);
+            break;
         default:
             IVSHMEM_DPRINTF("why are we reading " TARGET_FMT_plx "\n", addr);
             ret = 0;

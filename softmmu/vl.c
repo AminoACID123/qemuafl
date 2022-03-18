@@ -122,6 +122,103 @@
 #include "sysemu/iothread.h"
 #include "qemu/guest-random.h"
 
+#include "afl.h"
+bool in_afl;
+unsigned char* shm_ptr;
+char* inputFile;
+pid_t __pid;
+static bool device_attached;
+extern void qmp_device_del(const char *id, Error **errp);
+
+static DeviceState* attach_device(const char *param_str, Error **errp) {
+    static QemuOpts *opts = NULL;
+
+    if (opts == NULL)
+        opts = qemu_opts_parse_noisily(qemu_find_opts("device"), param_str, true);
+
+    device_attached = 1;
+    return qdev_device_add(opts, errp);
+}
+
+static void detach_device(const char *id, Error **errp) {
+    device_attached = false;
+    qmp_device_del(id, errp);
+}
+
+
+static void init_afl(void)
+{
+    char* shm_id_str = getenv(SHM_ENV_VAR);
+    int shm_id;
+    if(!shm_id_str)
+    {
+        in_afl = false;
+    }
+    else
+    {
+        in_afl = true;
+        shm_id = atoi(shm_id_str);
+        shm_ptr = shmat(shm_id, NULL, 0);
+        if(!shm_ptr || shm_ptr == (void*)-1)
+        {
+            FATAL("Attach shm failed!\n");
+        }
+        ACTF("QEMU: Running in afl mode, shm_ptr: %p\n", shm_ptr);
+    }
+
+    qemu_set_fd_handler(CTRL_FD, start_test, NULL, NULL);
+    __pid = getpid();
+}
+
+
+void start_test(void* opaque)
+{
+    Error *err;
+    char buff[4];
+    ACTF("QEMU: Starting a test run...\n");
+    if(read(CTRL_FD, buff, 4)!=4)
+    {
+        FATAL("QEMU: Reading from control pipe failed, not running afl?\n");
+    }
+    pid_t pid = getpid();
+    if(write(STUS_FD, &pid, sizeof(pid))!= sizeof(pid))
+    {
+        FATAL("QEMU: Writing to status pipe failed, not running afl?\n");
+    }
+    if(device_attached)
+    {
+        detach_device(FUZZ_DEV, &err);
+    }
+
+    memset(shm_ptr, 0, MAP_SIZE);
+    attach_device(FUZZ_DEV, &err);
+}
+
+void stop_test(int val)
+{
+    int status = 0;
+    ACTF("QEMU: Stopping test run...\n");
+
+    if (val == TEST_CRASH)
+    {
+        status = TEST_CRASH;
+    }
+
+    if(write(STUS_FD, &status, sizeof(status)!= sizeof(status)))
+    {
+        FATAL("QEMU: Writing to status pipe failed, not running afl?\n");
+    }
+}
+
+void reply_forksrv_handshake(void)
+{
+    if(write(STUS_FD, &__pid, sizeof(__pid)) != sizeof(__pid))
+    {
+        FATAL("QEMU: Replying forkserver handshake failed!\n");
+    }
+}
+
+
 #define MAX_VIRTIO_CONSOLES 1
 
 typedef struct BlockdevOptionsQueueEntry {
@@ -3449,6 +3546,9 @@ void qemu_init(int argc, char **argv, char **envp)
             case QEMU_OPTION_nouserconfig:
                 /* Nothing to be parsed here. Especially, do not error out below. */
                 break;
+            case QEMU_OPTION_inputFile:
+                inputFile = (char*)optarg;
+                break;
             default:
                 if (os_parse_cmd_args(popt->index, optarg)) {
                     error_report("Option not supported in this build");
@@ -3465,6 +3565,8 @@ void qemu_init(int argc, char **argv, char **envp)
 
     qemu_validate_options();
     qemu_process_sugar_options();
+
+    init_afl();
 
     /*
      * These options affect everything else and should be processed

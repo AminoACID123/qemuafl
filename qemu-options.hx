@@ -1742,6 +1742,15 @@ SRST
         output on a real or fake device.
 ERST
 
+
+DEF("inputFile", 0, QEMU_OPTION_inputFile,
+    "-inputFile            path of input file containing usb data\n",
+    QEMU_ARCH_ALL)
+SRST
+``-inputFile``
+    path of input file containing usb data
+ERST
+
 DEFHEADING()
 
 DEFHEADING(Display options:)
