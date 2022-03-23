@@ -28,6 +28,7 @@ struct req_data {
 #define USB_DT_CONFIG_SIZE		9
 
 static int read_from_file(int fd, uint8_t *buf, int n_bytes) {
+    ACTF("QEMU: Reading from input file...\n");
     ssize_t n_read;
     int pos = 0;
 
