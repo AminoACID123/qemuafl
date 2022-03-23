@@ -1743,7 +1743,7 @@ SRST
 ERST
 
 
-DEF("inputFile", 0, QEMU_OPTION_inputFile,
+DEF("inputFile", HAS_ARG, QEMU_OPTION_inputFile,
     "-inputFile            path of input file containing usb data\n",
     QEMU_ARCH_ALL)
 SRST
