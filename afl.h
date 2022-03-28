@@ -7,7 +7,7 @@
 #define CTRL_FD (FORKSRV_FD)
 #define STUS_FD (FORKSRV_FD + 1)
 
-#define FUZZ_DEV "__USBFUZZ__"
+#define FUZZ_DEV "USBFUZZ_"
 
 #define TEST_START 0x52
 #define TEST_CRASH 0x51

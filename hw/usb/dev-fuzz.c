@@ -28,7 +28,7 @@ struct req_data {
 #define USB_DT_CONFIG_SIZE		9
 
 static int read_from_file(int fd, uint8_t *buf, int n_bytes) {
-    ACTF("QEMU: Reading from input file...\n");
+    // ACTF("QEMU: Reading from input file...\n");
     ssize_t n_read;
     int pos = 0;
 
@@ -57,6 +57,7 @@ static struct afl_usb_fuzz_data fuzz_data;
 static void init_afl_usb_fuzz_data(void) {
     memset(&fuzz_data, 0, sizeof(fuzz_data));
 
+    // ACTF("QEMU: Validating input file...\n");
     if (inputFile == NULL)
         goto __failed;
 
@@ -66,7 +67,7 @@ static void init_afl_usb_fuzz_data(void) {
     fuzz_data.desc_fd =  open(inputFile, O_RDONLY);
     if (fuzz_data.desc_fd == -1)
         goto __failed;
-
+    // OKF("QEMU: Pass file validation!\n");
     // we first read device desc from the file
     struct req_data *device_desc = g_malloc0 (sizeof(struct req_data) + USB_DT_DEVICE_SIZE);
     device_desc->size = read_from_file(fuzz_data.desc_fd, device_desc->data, USB_DT_DEVICE_SIZE);
@@ -101,7 +102,7 @@ static void init_afl_usb_fuzz_data(void) {
     int size2 = read_from_file(fuzz_data.desc_fd, config_desc->data + size1, real_size - size1);
     config_desc->size += size2;
 
-    if (inputFile == NULL)
+    //if (inputFile == NULL)
         goto __end;
 
     if (access(inputFile, F_OK) == -1)
@@ -175,7 +176,7 @@ static void handle_get_descriptor_requests(USBDevice *dev, USBPacket *p,
     // uint8_t v_index = value & 0xff;
     struct req_data *req = NULL;
     int xlen = 0;
-    
+    // dump_request(request, value, index, length);
     switch(type) {
     case USB_DT_DEVICE:
         req = fuzz_data.device_desc;
@@ -241,7 +242,7 @@ static void usb_fuzz_handle_control(USBDevice *dev, USBPacket *p,
                                     int length, uint8_t *data) {
 
     int xlen;
-    dump_request(request, value, index, length);
+    // dump_request(request, value, index, length);
     // int xlen;
     // setting device addr, do nothing 
     if (request == (DeviceOutRequest | USB_REQ_SET_ADDRESS)) {

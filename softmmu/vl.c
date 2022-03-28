@@ -136,7 +136,7 @@ static DeviceState* attach_device(const char *param_str, Error **errp) {
     if (opts == NULL)
         opts = qemu_opts_parse_noisily(qemu_find_opts("device"), param_str, true);
 
-    device_attached = 1;
+    device_attached = true;
     return qdev_device_add(opts, errp);
 }
 
@@ -161,9 +161,9 @@ static void init_afl(void)
         shm_ptr = shmat(shm_id, NULL, 0);
         if(!shm_ptr || shm_ptr == (void*)-1)
         {
-            FATAL("Attach shm failed!\n");
+            PFATAL("Attach shm failed!\n");
         }
-        ACTF("QEMU: Running in afl mode, shm_area_ptr: %p\n", shm_ptr);
+        // ACTF("QEMU: Running in afl mode, shm_area_ptr: %p\n", shm_ptr);
     }
 
     qemu_set_fd_handler(CTRL_FD, start_test, NULL, NULL);
@@ -175,15 +175,15 @@ void start_test(void* opaque)
 {
     Error *err = NULL;
     char buff[4];
-    ACTF("QEMU: Starting a test run...\n");
+    // ACTF("QEMU: Starting a test run...\n");
     if(read(CTRL_FD, buff, 4) != 4)
     {
-        FATAL("QEMU: Reading from control pipe failed, not running afl?\n");
+        PFATAL("QEMU: Reading from control pipe failed, not running afl?\n");
     }
     pid_t pid = getpid();
     if(write(STUS_FD, &pid, sizeof(pid))!= sizeof(pid))
     {
-        FATAL("QEMU: Writing to status pipe failed, not running afl?\n");
+        PFATAL("QEMU: Writing to status pipe failed, not running afl?\n");
     }
     if(device_attached)
     {
@@ -192,8 +192,9 @@ void start_test(void* opaque)
 
     memset(shm_ptr, 0, MAP_SIZE);
 
-    attach_device(FUZZ_DEV, &err);
-    ACTF("QEMU: Input file: %s\n", inputFile);
+    attach_device("driver=usb-fuzz,id=" FUZZ_DEV, &err);
+
+    // ACTF("QEMU: Input file: %s\n", inputFile);
 }
 
 void stop_test(int val)
@@ -205,18 +206,19 @@ void stop_test(int val)
     {
         status = TEST_CRASH;
     }
-
-    if(write(STUS_FD, &status, sizeof(status)!= sizeof(status)))
+    // g_usleep(1000000);
+    if(write(STUS_FD, &status, sizeof(status))!= sizeof(status))
     {
-        FATAL("QEMU: Writing to status pipe failed, not running afl?\n");
+        PFATAL("QEMU: Writing to status pipe failed, not running afl?\n");
     }
+    // OKF("QEMU: Stopped test run\n");
 }
 
 void reply_forksrv_handshake(void)
 {
     if(write(STUS_FD, &__pid, sizeof(__pid)) != sizeof(__pid))
     {
-        FATAL("QEMU: Replying forkserver handshake failed!\n");
+        PFATAL("QEMU: Replying forkserver handshake failed!\n");
     }
 }
 
