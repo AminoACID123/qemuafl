@@ -163,7 +163,7 @@ static void init_afl(void)
         {
             PFATAL("Attach shm failed!\n");
         }
-        // ACTF("QEMU: Running in afl mode, shm_area_ptr: %p\n", shm_ptr);
+        ACTF("QEMU: Running in afl mode, shm_area_ptr: %p\n", shm_ptr);
     }
 
     qemu_set_fd_handler(CTRL_FD, start_test, NULL, NULL);
@@ -175,7 +175,7 @@ void start_test(void* opaque)
 {
     Error *err = NULL;
     char buff[4];
-    // ACTF("QEMU: Starting a test run...\n");
+    ACTF("QEMU: Starting a test run...\n");
     if(read(CTRL_FD, buff, 4) != 4)
     {
         PFATAL("QEMU: Reading from control pipe failed, not running afl?\n");
@@ -194,7 +194,7 @@ void start_test(void* opaque)
 
     attach_device("driver=usb-fuzz,id=" FUZZ_DEV, &err);
 
-    // ACTF("QEMU: Input file: %s\n", inputFile);
+    ACTF("QEMU: Input file: %s\n", inputFile);
 }
 
 void stop_test(int val)
@@ -211,7 +211,7 @@ void stop_test(int val)
     {
         PFATAL("QEMU: Writing to status pipe failed, not running afl?\n");
     }
-    // OKF("QEMU: Stopped test run\n");
+    OKF("QEMU: Stopped test run\n");
 }
 
 void reply_forksrv_handshake(void)
