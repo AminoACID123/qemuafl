@@ -7,7 +7,7 @@ softmmu_ss.add(files(
   'core.c',
   'pcap.c',
   'libhw.c',
-  'dev-fuzz.c'
+  'dev-bt.c'
 ))
 
 softmmu_ss.add(when: 'CONFIG_USB', if_true: files(
